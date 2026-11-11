@@ -45,6 +45,7 @@ Kết quả tự chạy script (chỉ chạy **sau khi** labcoach phát ground t
 | --- | ---: | ---: | ---: | ---: |
 | 12/11 00:11 (trước khi xem reference) | mIoU 0,774 → 16,6/20 | 0,759 → 25,5/32 | PQ 0,424 → 14,9/30 | **57,0/82** |
 | 12/11 01:13 (sau khi xem reference) | mIoU 0,850 → 20,0/20 | 0,759 → 25,5/32 | PQ 0,450 → 16,7/30 | **62,2/82** |
+| 12/11 02:28 (sau khi xem reference, vòng 2 — chỉ `hard_panoptic`) | mIoU 0,850 → 20,0/20 | 0,759 → 25,5/32 | PQ 0,492 → 19,5/30 | **65,0/82** |
 
 Điểm tự đánh giá, không phải điểm chính thức. Thay đổi giữa hai bản là **sau khi đã xem reference**: dùng script chấm để tìm chỗ mất điểm, rồi chỉnh hậu xử lý SAM3 (không tách trời khỏi tán cây vì reference vẽ tán cây thành khối; thêm prompt "lawn" cho sidewalk; ngưỡng tin cậy vật 0,6 cho panoptic để bớt vật thừa) và chạy lại `easy_semantic`, `hard_panoptic`, `cp3_thin`, `cp6_coverage`. Giữ nguyên 3 object vẽ tay ở `easy_semantic` và bản đã chỉnh của `medium_instance`, `cp4_curb`. File ground truth không đưa vào fork.
 
@@ -103,6 +104,19 @@ Cách làm: lưu kết quả thô của SAM3 cho 8 ảnh có reference một l�
 | Nới mask thing 1–2 px | | 20,7 / 12,5 | 14,2 | ❌ giảm mạnh |
 
 Kết quả cuối: chạy lại `easy_semantic` (giữ 3 object vẽ tay), `hard_panoptic`, `cp3_thin`, `cp6_coverage`; giữ bản đã chỉnh của `medium_instance` (25,5 cao hơn SAM3 tự chạy 24,6) và `cp4_curb`. Export 12/11 01:13: **62,2/82** (easy 20,0 · medium 25,5 · hard 16,7).
+
+### C2. Vòng tinh chỉnh thứ 2 (sau reference, 12/11 01:30–02:30)
+
+Thử thêm ba kỹ thuật, đo bằng cách gọi trực tiếp server SAM3 rồi chấm bằng `scoring/score.py`:
+
+| Thử nghiệm | Medium | Hard | Kết luận |
+| --- | ---: | ---: | --- |
+| Mốc vòng 1 (SAM3 tự chạy) | 24,6 | 16,5 | — |
+| Giải mã lại mask bằng box prompt (SAM3 instance decoder) | 24,9–25,1 | 19,1 | ❌ Medium vẫn thấp hơn bản đã chỉnh (25,5); Hard giảm |
+| Chia ảnh 2×2 phóng to để bắt vật nhỏ | 24,6–24,9 | | ❌ không tăng, ~160 s/ảnh > giới hạn 120 s của CVAT |
+| Ngưỡng tin cậy riêng theo lớp: `bus` 0,3, `traffic light` 0,5 (SAM3 tự tin thấp với xe buýt) | | **19,7** | ✅ panoptic |
+
+Chỉ chạy lại `hard_panoptic` (toàn bộ là kết quả tự động, bật Clean). Export thật 02:28: PQ 0,492 → **19,5/30**; tổng ba tier **65,0/82**. Các task khác giữ nguyên.
 
 ### D. Giới hạn
 
